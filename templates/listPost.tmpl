@@ -1,0 +1,10 @@
+<html>  
+    {{range $index, $post := .listPost}}
+    <div>
+        <h3>{{$post.Email}}</h3>
+        <h5>ID: {{$post.ID}}</h5>
+        <p>{{$post.Content}}</p>
+    </div>
+    <br></br>
+    {{end}}
+</html>

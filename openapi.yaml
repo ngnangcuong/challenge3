@@ -1,0 +1,383 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Challenge 3
+server:
+  - url: http://localhost:8080
+paths:
+  /user:
+    get:
+      summary: 'List of user'
+      responses:
+        200:
+          description: 'Render sucessfully'
+          content:
+            application/json:
+              type: array
+              items:
+                schema:
+                  $ref: '#/components/schemas/User'
+
+  /user/login:
+    get:
+      summary: 'Rendering login page'
+      responses:
+        200:
+          description: 'Rendering successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+    post:
+      summary: 'User is logging in'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Authentication'
+      responses:
+        200:
+          description: 'Login successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        
+  /user/logout:
+    get:
+      description: Log out
+      responses:
+        200:
+          description: Log out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+                
+  /user/register:
+    get:
+      summary: 'Rendering register page'
+      responses:
+        200:
+          description: 'Render sucessfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+    
+    post:
+      summary: 'User is signing up'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+
+      responses:
+        200:
+          description: "Sign up sucessfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+  
+  /user/create-user:
+    post:
+      description: 'Create a new user'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+
+      responses:
+        200:
+          description: 'create successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401:
+          description: 'Not Authorized'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+  /user/delete-user/{userEmail}:
+    delete:
+      description: 'Delete one user'
+      parameters:
+        - in: path
+          name: userEmail
+          description: user's Email
+          required: true
+          schema:
+            type: string
+      responses:
+        200: 
+          description: 'Delete successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401: 
+          description: 'Not Authorized'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+  
+  /user/update-user/{userEmail}:
+    patch:
+      description: 'Update user info'
+      parameters:
+        - in: path
+          name: userEmail
+          description: user's Email
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+
+      responses:
+        200:
+          description: 'update successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401:
+          description: 'Not Authorized'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+  /user/change-role:
+    put:
+      description: 'change user role'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRoleRequest'
+
+      responses:
+        200:
+          description: 'change role successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401:
+          description: 'Not Authorized'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+  /user/new-role:
+    get:
+      description: 'get new-role page'
+      responses:
+        200:
+          description: 'get successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+    post:
+      description: 'create new role'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+
+      responses:
+        200:
+          description: 'change role successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401:
+          description: 'Not Authorized'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+  
+  /post:
+    get:
+      description: 'List of post'
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            format: int32
+          description: page number
+      responses:
+        200:
+          description: get list of post successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties:
+                    bodyPost:
+                      type: string
+                    userName:
+                      type: string
+
+  /post/create:
+    post:
+      description: Create a new post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        200:
+          description: Create successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+  
+  /post/delete/{postID}:
+    delete:
+      description: Delete one post
+      parameters:
+        - in: path
+          name: postID
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200:
+          description: Delete successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401:
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+  /post/update/{postID}:
+    put:
+      description: Edit the post's content
+      parameters:
+        - in: path
+          name: postID
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        200:
+          description: Edit successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        401:
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+
+components:
+  schemas:
+    Response:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        description:
+          type: string
+
+    Authentication:
+      type: object
+      properties:
+        email:
+          type: string
+          example: nangcuong@gmail.com
+        password:
+          type: string
+          example: cuong123
+    
+    User:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Cuong
+        email:
+          type: string
+          example: nangcuong@gmail.com
+        password:
+          type: string
+          example: cuong123
+    
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Cuong
+        password:
+          type: string
+          example: cuong123
+
+    ChangeRoleRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: nangcuong@gmail.com
+        role:
+          type: string
+          example: admin
+    
+    Role:
+      type: object
+      properties:
+        name:
+          type: string
+          example: admin
+        permission:
+          type: string
+          example: crud

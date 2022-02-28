@@ -1,0 +1,7 @@
+<html>
+    <h1>User List</h1>
+    {{range $index, $user := .userList}}
+        <p>{{$user.Email}}</p>
+    {{end}}
+
+</html>
