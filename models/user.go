@@ -17,3 +17,12 @@ type Authen struct {
 	Email 	string `json:"email"`
 	Password	string `json:"password"`
 }
+
+type UserRepo interface {
+	Select() ([]User, error)
+	Find(email string) (User, error)
+	Create(user User) (error)
+	Insert(user User) (error)
+	Update(user User) (error)
+	Delete(email string) (error)
+}

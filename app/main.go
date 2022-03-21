@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	
-	//"challenge3/models"
 	"challenge3/api/user"
 	"challenge3/api/post"
 	"challenge3/database"
@@ -27,11 +26,11 @@ func InitRoute(router *gin.Engine) {
 		userRoute.POST("/login", user.LogIn)
 		userRoute.GET("/logout", user.LogOut)
 		userRoute.POST("/register", user.Register)
-		userRoute.POST("/create-user", user.CreateUser)
-		userRoute.DELETE("/delete-user/:userEmail", user.DeleteUser)
-		userRoute.PATCH("/update-user/:userEmail", user.UpdateUser)
-		userRoute.PUT("/change-role", user.ChangeRole)
-		userRoute.POST("/new-role", user.NewRole)
+		userRoute.POST("/create-user", middleware.NeedPermission("c"), user.CreateUser)
+		userRoute.DELETE("/delete-user/:userEmail", middleware.NeedPermission("d"), user.DeleteUser)
+		userRoute.PATCH("/update-user/:userEmail", middleware.NeedPermission("u"), user.UpdateUser)
+		userRoute.PUT("/change-role", middleware.NeedRole("admin"), user.ChangeRole)
+		userRoute.POST("/new-role", middleware.NeedRole("admin"), user.NewRole)
 		userRoute.GET("/", user.GetListUser)
 	}
 

@@ -11,3 +11,11 @@ type Post struct {
 	Content		string `json:"content"`
 	Create_At	time.Time `json:"create_at"`	
 }
+
+type PostRepo interface {
+	Select() ([]Post, error)
+	Delete(id uint) (error)
+	Update(id uint, content string)	(error)
+	Create(post Post) (error)
+	Find(id uint) (Post, error)
+}

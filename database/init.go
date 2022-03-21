@@ -3,38 +3,58 @@ package database
 import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+
 	"log"
 	"fmt"
+	"sync"
+
 	"challenge3/models"
 )
 
+var (
+	lock = &sync.Mutex{}
+	connectionSingleton *gorm.DB
+)
+
 func GetDatabase() *gorm.DB {
-	dbname := "Challenge3"
-	db := "postgres"
-	dbpassword := "Cuongnguyen2001"
-	dburl := "postgres://postgres:" + dbpassword + "@localhost/" + dbname + "?sslmode=disable"
+	if connectionSingleton == nil {
+		lock.Lock()
+		defer lock.Unlock()
 
-	connection, err := gorm.Open(db, dburl)
+		if connectionSingleton == nil {
+			dbname := "Challenge3"
+			db := "postgres"
+			dbpassword := "Cuongnguyen2001"
+			dburl := "postgres://postgres:" + dbpassword + "@localhost/" + dbname + "?sslmode=disable"
 
-	if err != nil {
-		log.Fatalln("Wrong database url")
+			connection, err := gorm.Open(db, dburl)
+
+			if err != nil {
+				log.Fatalln("Wrong database url")
+			}
+
+			sqldb := connection.DB()
+			err = sqldb.Ping()
+
+			if err != nil {
+				log.Fatalln("Database is connectedt")
+			}
+			// log.Fatalln("Database is connected")
+			fmt.Println("Database is connected")
+			return connection
+		}
+
+		fmt.Println("Database is already connected")
 	}
 
-	sqldb := connection.DB()
-	err = sqldb.Ping()
+	fmt.Println("Database is already connected")
 
-	if err != nil {
-		log.Fatalln("Database is connectedt")
-	}
-	// log.Fatalln("Database is connected")
-	fmt.Println("Database is connected")
-
-	return connection
+	return connectionSingleton
 }
 
 func InitMigration() {
 	connection := GetDatabase()
-	defer CloseDatabase(connection)
+	// defer CloseDatabase()
 
 	connection.AutoMigrate(models.User{})
 	connection.AutoMigrate(models.Post{})
@@ -42,7 +62,7 @@ func InitMigration() {
 
 }
 
-func CloseDatabase(connection *gorm.DB) {
-	sqldb := connection.DB()
+func CloseDatabase() {
+	sqldb := connectionSingleton.DB()
 	sqldb.Close()
 }

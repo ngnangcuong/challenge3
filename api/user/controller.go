@@ -6,9 +6,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	
 	"time"
-	"strings"
 	"challenge3/database"
 	"challenge3/models"
+	repo "challenge3/repository"
 )
 
 var mySigningKey = "pa$$w0rd"
@@ -41,19 +41,9 @@ func GenerateJWT(userAuth *models.User) (string, error) {
 	return tokenString, nil
 }
 
-func GetPermisstion(role string) string {
-	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
-
-	var roleCheck models.Role
-	connection.Where("name = ?", role).First(&roleCheck)
-
-	return roleCheck.Permission
-}
-
 func GetListUser(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	userRepo := repo.NewUserRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		c.JSON(200, gin.H{
@@ -62,9 +52,13 @@ func GetListUser(c *gin.Context) {
 		return
 	}
 
-	var userList []models.User
+	userList, err := userRepo.Select()
 
-	connection.Find(&userList)
+	if err != nil {
+		Response(c, 200, "Database is wrong")
+		return
+	}
+
 
 	c.HTML(200, "listUser.tmpl", gin.H{
 		"userList": userList,
@@ -73,15 +67,12 @@ func GetListUser(c *gin.Context) {
 
 func LogIn(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	userRepo := repo.NewUserRepo(connection)
 
 	email := c.PostForm("email")
 	password := c.PostForm("password")
 
-	var userAuth models.User
-
-	connection.Where("email = ?", email).First(&userAuth)
-
+	userAuth, _ := userRepo.Find(email)
 	if userAuth.Email == "" {
 		Response(c, 200, "Not User")
 		return
@@ -98,7 +89,7 @@ func LogIn(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("token", tokenString, 150, "/", "localhost", false, true)
+	// c.SetCookie("token", tokenString, 150, "/", "localhost", false, true)
 	Response(c, 200, tokenString)
 }
 
@@ -109,16 +100,13 @@ func LogOut(c *gin.Context) {
 
 func Register(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	userRepo := repo.NewUserRepo(connection)
 
 	email := c.PostForm("email")
 	name := c.PostForm("name")
 	password := c.PostForm("password")
 
-	var userCheck models.User
-	
-	connection.Where("email = ?", email).First(&userCheck)
-
+	userCheck, _ := userRepo.Find(email)
 	if userCheck.Email != "" {
 		Response(c, 200, "Email is already existed")
 		return
@@ -138,13 +126,13 @@ func Register(c *gin.Context) {
 		Role: "user",
 	}
 
-	connection.Create(&user)
+	userRepo.Create(user)
 	Response(c, 200, "Create user successfully")
 }
 
 func CreateUser(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	userRepo := repo.NewUserRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		c.JSON(200, gin.H{
@@ -153,11 +141,8 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	role := c.MustGet("role")
-	permission := GetPermisstion(role.(string))
-
-	if canCreate := strings.Contains(permission, "c"); !canCreate && role.(string) != "admin" {
-		c.JSON(200, gin.H{
+	if permit := c.MustGet("Permission").(bool); !permit {
+		c.JSON(401, gin.H{
 			"message": "Not Authorized",
 		})
 		return
@@ -177,14 +162,14 @@ func CreateUser(c *gin.Context) {
 		Password: string(hashPassword),
 		Role: "user",
 	}
-	connection.Create(&newUser)
+	userRepo.Create(newUser)
 
 	Response(c, 200, "Create user successfully")
 }
 
 func DeleteUser(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	userRepo := repo.NewUserRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		c.JSON(200, gin.H{
@@ -193,33 +178,28 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	role := c.MustGet("role")
-	permission := GetPermisstion(role.(string))
-
-	if canDelete := strings.Contains(permission, "d"); !canDelete && role != "admin"{
-		c.JSON(200, gin.H{
+	if permit := c.MustGet("Permission").(bool); !permit {
+		c.JSON(401, gin.H{
 			"message": "Not Authorized",
 		})
 		return
 	}
 
 	email := c.Param("userEmail")
-	var userCheck models.User
-
-	connection.Where("email = ?", email).First(&userCheck)
-
+	
+	userCheck, _ := userRepo.Find(email)
 	if userCheck.Email == "" {
 		Response(c, 200, "Do not exist user")
 		return
 	}
 
-	connection.Delete(&userCheck)
+	userRepo.Delete(email)
 	Response(c, 200, "Delete user successfully")
 }
 
 func UpdateUser(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	userRepo := repo.NewUserRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		c.JSON(200, gin.H{
@@ -228,55 +208,49 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	role := c.MustGet("role")
-	permission := GetPermisstion(role.(string))
-
-	if canUpdate := strings.Contains(permission, "u"); !canUpdate && role != "admin"{
-		c.JSON(200, gin.H{
+	if permit := c.MustGet("Permission").(bool); !permit {
+		c.JSON(401, gin.H{
 			"message": "Not Authorized",
 		})
 		return
 	}
 
-	email := c.Param("userEmail")
-	var userCheck models.User
-
-	connection.Where("email = ?", email).First(&userCheck)
-
-	if userCheck.Email == "" {
+	var user = models.User{
+		Email: c.Param("userEmail"),
+		Name: c.PostForm("name"),
+		Password: c.PostForm("password"),
+	}
+	
+	err := userRepo.Update(user)
+	if err != nil {
 		Response(c, 200, "Do not exist user")
 		return
 	}
 
-	userCheck.Name = c.PostForm("name")
-	userCheck.Password = c.PostForm("password")
-	
-	connection.Save(&userCheck)
 	Response(c, 200, "Update user successfully")
 
 }
 
 func NewRole(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
+	roleRepo := repo.NewRoleRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		Response(c, 200, "Not Log in yet")
 		return
 	}
 
-	role := c.MustGet("role")
-	if role != "admin" {
-		Response(c, 200, "Not Authorized")
+	if permit := c.MustGet("Permission").(bool); !permit {
+		c.JSON(401, gin.H{
+			"message": "Not Authorized",
+		})
 		return
 	}
 
 	name := c.PostForm("name")
 	permission := c.PostForm("permission")
 
-	var roleCheck models.Role
-	connection.Where("name = ?", name).First(&roleCheck)
-
+	roleCheck, _ := roleRepo.Find(name)
 	if roleCheck.Name != "" {
 		Response(c, 200, "This role is available")
 		return
@@ -285,46 +259,42 @@ func NewRole(c *gin.Context) {
 	roleCheck.Name = name
 	roleCheck.Permission = permission
 
-	connection.Create(&roleCheck)
+	roleRepo.Create(roleCheck)
 	Response(c, 200, "Create role successfully")
 }
 
 func ChangeRole(c *gin.Context) {
 	connection := database.GetDatabase()
-	defer database.CloseDatabase(connection)
-
+	userRepo := repo.NewUserRepo(connection)
+	roleRepo := repo.NewRoleRepo(connection)
 	if check := c.MustGet("isLogin").(bool); !check {
 		Response(c, 200, "Not Log in yet")
 		return
 	}
 
-	role := c.MustGet("role")
-	if role != "admin" {
-		Response(c, 200, "Not Authorized")
+	if permit := c.MustGet("Permission").(bool); !permit {
+		c.JSON(401, gin.H{
+			"message": "Not Authorized",
+		})
 		return
 	}
 
 	email := c.PostForm("email")
-	role = c.PostForm("role")
+	role := c.PostForm("role")
 
-	var (
-		userCheck models.User
-		roleCheck models.Role
-	)
-
-	connection.Where("email = ?", email).First(&userCheck)
+	userCheck, _ := userRepo.Find(email)
 	if userCheck.Email == "" {
 		Response(c, 200, "Does not exist user")
 		return
 	}
 
-	connection.Where("name = ?", role).First(&roleCheck)
+	roleCheck, _ := roleRepo.Find(role)
 	if roleCheck.Name == "" {
 		Response(c, 200, "Does not exist role")
 		return
 	}
 
-	userCheck.Role = role.(string)
+	userCheck.Role = role
 	connection.Save(&userCheck)
 	Response(c, 200, "Change role successfully")
 

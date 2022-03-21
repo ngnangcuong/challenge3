@@ -335,6 +335,7 @@ components:
         email:
           type: string
           example: nangcuong@gmail.com
+          pattern: '^\d{3}-\d{2}-\d{4}$'
         password:
           type: string
           example: cuong123
@@ -348,6 +349,7 @@ components:
         email:
           type: string
           example: nangcuong@gmail.com
+          pattern: '^\d{3}-\d{2}-\d{4}$'
         password:
           type: string
           example: cuong123
