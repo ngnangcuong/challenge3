@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"challenge3/models"
 	"challenge3/database"
+	repo "challenge3/repository"
 )
 
 func GetListPost(c *gin.Context) {
@@ -47,6 +48,7 @@ func GetListPost(c *gin.Context) {
 
 func CreatePost(c *gin.Context) {
 	connection := database.GetDatabase()
+	postRepo := repo.NewPostRepo(connection)
 
 	if isLogin := c.MustGet("isLogin").(bool); !isLogin {
 		c.JSON(200, gin.H{
@@ -65,7 +67,7 @@ func CreatePost(c *gin.Context) {
 		Content: content,
 	}
 
-	connection.Create(&post)
+	postRepo.Create(post)
 	c.JSON(200, gin.H{
 		"message": "Create post successfully",
 	})
@@ -73,6 +75,7 @@ func CreatePost(c *gin.Context) {
 
 func UpdatePost(c *gin.Context) {
 	connection := database.GetDatabase()
+	postRepo := repo.NewPostRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		c.JSON(200, gin.H{
@@ -83,9 +86,8 @@ func UpdatePost(c *gin.Context) {
 	role := c.MustGet("role").(string)
 	postID := c.Param("postID")
 	userID := c.MustGet("userID")
-	var postCheck models.Post
+	postCheck, _ := postRepo.Find(postID)
 
-	connection.First(&postCheck, postID)
 	if postCheck.Content == "" {
 		c.JSON(200, gin.H{
 			"message": "Does not exist post",
@@ -101,8 +103,7 @@ func UpdatePost(c *gin.Context) {
 	}
 
 	content := c.PostForm("content")
-	postCheck.Content = content
-	connection.Save(&postCheck)
+	postRepo.Update(postID, content)
 
 	c.JSON(200, gin.H{
 		"message": "Edit post successfully",
@@ -112,6 +113,7 @@ func UpdatePost(c *gin.Context) {
 
 func DeletePost(c *gin.Context) {
 	connection := database.GetDatabase()
+	postRepo := repo.NewPostRepo(connection)
 
 	if check := c.MustGet("isLogin").(bool); !check {
 		c.JSON(200, gin.H{
@@ -122,9 +124,8 @@ func DeletePost(c *gin.Context) {
 	role := c.MustGet("role").(string)
 	postID := c.Param("postID")
 	userID := c.MustGet("userID")
-	var postCheck models.Post
+	postCheck, _ := postRepo.Find(postID)
 
-	connection.First(&postCheck, postID)
 	if postCheck.Content == ""  {
 		c.JSON(200, gin.H{
 			"message": "Does not exist post",
@@ -139,7 +140,7 @@ func DeletePost(c *gin.Context) {
 		return
 	}
 
-	connection.Delete(&postCheck)
+	postRepo.Delete(postID)
 	c.JSON(200, gin.H{
 		"message": "Delete post successfully",
 	})
